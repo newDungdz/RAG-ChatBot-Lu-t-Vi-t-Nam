@@ -1,0 +1,112 @@
+body {
+    font-family: sans-serif;
+    margin: 0; /* Quan trọng: Xóa mọi margin mặc định */
+    background-color: #f4f4f4;
+    /* Không cần display: flex nữa vì container sẽ tự chiếm hết */
+    height: 100vh; /* Đảm bảo body chiếm toàn bộ chiều cao */
+    overflow: hidden; /* Ngăn body bị cuộn khi container chiếm hết */
+}
+
+/* Thay đổi phần #chat-container */
+#chat-container {
+    width: 100%; /* Chiếm toàn bộ chiều rộng */
+    height: 100vh; /* Chiếm toàn bộ chiều cao */
+    /* Bỏ max-width */
+    background-color: #fff;
+    /* Bỏ border-radius và box-shadow nếu muốn sát viền hoàn toàn */
+    /* border-radius: 8px; */
+    /* box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); */
+    display: flex;
+    flex-direction: column;
+    /* overflow: hidden; đã có ở body hoặc giữ lại cũng được */
+}
+
+/* Giữ nguyên các phần CSS còn lại (h2, #chat-box, .message, ...) */
+
+h2 {
+    text-align: center;
+    padding: 15px;
+    margin: 0;
+    background-color: #4CAF50; /* Màu xanh lá cây */
+    color: white;
+    flex-shrink: 0; /* Không cho header co lại */
+    /* Bỏ border-radius ở top nếu container không còn radius */
+    /* border-top-left-radius: 8px; */
+    /* border-top-right-radius: 8px; */
+}
+
+#chat-box {
+    flex-grow: 1; /* Chiếm hết không gian còn lại */
+    overflow-y: auto; /* Cho phép cuộn khi nội dung dài */
+    padding: 15px;
+    /* Giữ padding để chữ không dính sát viền */
+    /* border-bottom: 1px solid #eee; Không cần border này nữa */
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 80%; /* Tin nhắn không quá rộng */
+    line-height: 1.4;
+    word-wrap: break-word; /* Tự xuống dòng */
+    /* Thêm display flex để align-self hoạt động đúng */
+    display: flex;
+}
+
+.user-message {
+    background-color: #e1f5fe; /* Màu xanh nhạt cho user */
+    align-self: flex-end; /* Căn phải */
+    margin-left: auto; /* Đẩy sang phải */
+    border-bottom-right-radius: 5px; /* Góc bo khác biệt */
+}
+
+.bot-message {
+    background-color: #f1f1f1; /* Màu xám nhạt cho bot */
+    align-self: flex-start; /* Căn trái */
+    margin-right: auto; /* Đẩy sang trái */
+    border-bottom-left-radius: 5px; /* Góc bo khác biệt */
+}
+
+.bot-message p {
+    margin: 0; /* Bỏ margin mặc định của thẻ p */
+}
+
+#input-area {
+    display: flex;
+    padding: 15px;
+    border-top: 1px solid #eee; /* Đường kẻ phân cách */
+    background-color: #fff; /* Nền trắng cho vùng nhập liệu */
+    flex-shrink: 0; /* Không cho vùng input co lại */
+}
+
+#user-input {
+    flex-grow: 1; /* Input chiếm phần lớn không gian */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Bo tròn input */
+    margin-right: 10px;
+    outline: none; /* Bỏ viền xanh khi focus */
+}
+
+#send-button {
+    padding: 10px 20px;
+    background-color: #4CAF50; /* Màu xanh */
+    color: white;
+    border: none;
+    border-radius: 20px; /* Bo tròn nút */
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#send-button:hover {
+    background-color: #45a049; /* Màu xanh đậm hơn khi hover */
+}
+
+#loading-indicator {
+    color: #888;
+    font-size: 0.9em;
+    text-align: center; /* Căn giữa text loading */
+    padding-bottom: 5px; /* Thêm chút khoảng cách dưới */
+    flex-shrink: 0; /* Không cho loading co lại */
+}

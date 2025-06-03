@@ -1,0 +1,11 @@
+{
+  "exclude": [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.venv",
+    "**/build",
+    "**/dist",
+    "**/data"
+  ],
+  "include": ["src", "scripts"]
+}

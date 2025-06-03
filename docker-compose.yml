@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  app:
+    build: 
+      context: ./src/chatbot
+    container_name: app
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./src/chatbot/.env  # This connects the .env file
+    environment:
+      - FLASK_ENV=development
+    working_dir: /app
+    volumes:
+    - ./src/chatbot:/app
+    networks:
+      - pipeline
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.0.1
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - pipeline
+
+  # kibana:
+  #   image: docker.elastic.co/kibana/kibana:9.0.1
+  #   container_name: kibana
+  #   ports:
+  #     - "5601:5601"
+  #   environment:
+  #     ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+  #   depends_on:
+  #     - elasticsearch
+  #   networks:
+  #     - pipeline
+
+volumes:
+  elasticsearch-data:
+
+networks:
+  pipeline:
+    driver: bridge
