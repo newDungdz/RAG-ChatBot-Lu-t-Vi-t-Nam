@@ -13,6 +13,8 @@ INDEX_NAME = "chunks".lower()
 FOLDER_UPLOAD_MODE = False
 FILE_FOLDER = "data\\json_data\\chunked_data"
 JSON_FILE_PATH = "data\\json_data\\flatten_chunk_data\\embedded\\chunks_embeddings_intfloat_multilingual-e5-small.json"
+
+
 CLOUD_ID="Legal_RAG_data:YXNpYS1zb3V0aGVhc3QxLmdjcC5lbGFzdGljLWNsb3VkLmNvbTo0NDMkYWJhZmZjOGQxNjA3NGY0Y2EwMzc4NGFhNDdlMmM1MjckNzg2YjMzY2I1NGFjNDNiZTg1NTljZDgxNTJlODJmNDA="
 
 # --- Index mapping (will be dynamically updated with embedding dims) ---
@@ -87,9 +89,14 @@ INDEX_MAPPING_TEMPLATE = {
 
 # --- Elasticsearch Connection ---
 try:
+    # es_client = Elasticsearch(
+    #             cloud_id=CLOUD_ID,
+    #             api_key=("lQRSIZcBDy4SfGpi8c3q", "iKwdTKOvjEz31ahN9r7eug")
+    # )
     es_client = Elasticsearch(
-                cloud_id=CLOUD_ID,
-                api_key=("lQRSIZcBDy4SfGpi8c3q", "iKwdTKOvjEz31ahN9r7eug")
+        ELASTICSEARCH_HOST,
+        max_retries=3,
+        retry_on_timeout=True
     )
     if not es_client.ping():
         raise ValueError("Connection to Elasticsearch failed!")
