@@ -1,5 +1,10 @@
 Hướng dẫn sử dụng:
 
+Các quy định:
+- Có môi trường chạy python trên máy ( như VSCode )
+- Có Docker đã được tải về.
+
+
 Nếu sử dụng Elasticsearch Cloud:
 - Vào chatbot/.env, chỉnh LOCAL_MODE = False
 - Comment container elasticsearch ở trong docker-compose.yml
