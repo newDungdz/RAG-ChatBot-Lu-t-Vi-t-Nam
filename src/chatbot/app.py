@@ -1,75 +1,42 @@
 # app.py (Backend Server with Chat Memory)
 
-from flask import Flask, request, jsonify, send_from_directory, session
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import google.generativeai as genai
 import os
 import json
-import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from retrival_pipeline import RAGLawRetrieval
 
 app = Flask(__name__, static_folder='static', static_url_path='')
-CORS(app, supports_credentials=True)
+CORS(app)
 
-# Set secret key for session management
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+# Simple list-based chat memory storage
+chat_history = []
+MAX_MESSAGES = 50  # Maximum number of messages to keep in memory
 
-# Chat memory storage - In production, consider using Redis or database
-chat_memory = {}
-MEMORY_EXPIRY_HOURS = 24  # Chat sessions expire after 24 hours
-
-def cleanup_expired_sessions():
-    """Remove expired chat sessions"""
-    current_time = datetime.now()
-    expired_sessions = []
-    
-    for session_id, session_data in chat_memory.items():
-        if current_time - session_data['last_activity'] > timedelta(hours=MEMORY_EXPIRY_HOURS):
-            expired_sessions.append(session_id)
-    
-    for session_id in expired_sessions:
-        del chat_memory[session_id]
-        print(f"INFO: Expired chat session {session_id} removed")
-
-def get_or_create_session_id():
-    """Get existing session ID or create new one"""
-    if 'session_id' not in session:
-        session['session_id'] = str(uuid.uuid4())
-        print(f"INFO: New session created: {session['session_id']}")
-    return session['session_id']
-
-def get_chat_history(session_id):
-    """Get chat history for a session"""
-    if session_id not in chat_memory:
-        chat_memory[session_id] = {
-            'messages': [],
-            'created_at': datetime.now(),
-            'last_activity': datetime.now()
-        }
-    return chat_memory[session_id]
-
-def add_message_to_history(session_id, role, content):
+def add_message_to_history(role, content):
     """Add a message to chat history"""
-    session_data = get_chat_history(session_id)
-    session_data['messages'].append({
+    message = {
         'role': role,
         'content': content,
         'timestamp': datetime.now().isoformat()
-    })
-    session_data['last_activity'] = datetime.now()
+    }
+    chat_history.append(message)
     
-    # Keep only last 20 messages to prevent memory overflow
-    if len(session_data['messages']) > 20:
-        session_data['messages'] = session_data['messages'][-20:]
+    # Keep only last MAX_MESSAGES to prevent memory overflow
+    if len(chat_history) > MAX_MESSAGES:
+        chat_history[:] = chat_history[-MAX_MESSAGES:]
+    
+    print(f"INFO: Added {role} message to history. Total messages: {len(chat_history)}")
 
-def format_conversation_context(messages, max_messages=10):
+def format_conversation_context(max_messages=10):
     """Format recent messages for context"""
-    if not messages:
+    if not chat_history:
         return ""
     
     # Get last max_messages for context
-    recent_messages = messages[-max_messages:] if len(messages) > max_messages else messages
+    recent_messages = chat_history[-max_messages:] if len(chat_history) > max_messages else chat_history
     
     context = "Lịch sử cuộc trò chuyện gần đây:\n"
     for msg in recent_messages:
@@ -78,6 +45,12 @@ def format_conversation_context(messages, max_messages=10):
     context += "\nCâu hỏi hiện tại:\n"
     
     return context
+
+def clear_chat_history():
+    """Clear all chat history"""
+    global chat_history
+    chat_history = []
+    print("INFO: Chat history cleared")
 
 # os.environ['GOOGLE_API_KEY'] = "AIzaSyC_IGEJNCZJrQanC1eAfiOGSrd0rfU_yHs"
 
@@ -119,8 +92,8 @@ retrieval_flow = RAGLawRetrieval(
     es_host='localhost',
     es_port=9200,
     embedding_model = 'intfloat/multilingual-e5-small',
-    query_process_model='gemini-2.0-flash-lite',
-    es_index='chunks_intfloat_multilingual-e5-small',
+    query_process_model='gemini-2.0-flash',
+    # es_index='chunks_intfloat_multilingual-e5-small',
 )
 
 # --- ĐỊNH NGHĨA TOOL (Hàm Python và Khai báo cho Gemini) ---
@@ -175,13 +148,10 @@ try:
 except Exception as e:
     print(f"CRITICAL ERROR: Could not initialize Gemini Model '{MODEL_NAME_TO_USE}': {e}")
 
-# API Endpoint cho Chat với Memory
+# API Endpoint cho Chat với Simple List Memory
 @app.route('/chat', methods=['POST'])
 def handle_chat_request():
     print("\n--- [BACKEND PYTHON - /chat ENDPOINT]: Received new request ---")
-    
-    # Clean up expired sessions periodically
-    cleanup_expired_sessions()
     
     if not GEMINI_MODEL:
         print("ERROR: Gemini Model is not available (likely due to missing API Key).")
@@ -193,20 +163,16 @@ def handle_chat_request():
             return jsonify({"error": "Yêu cầu không hợp lệ: Thiếu 'user_message'."}), 400
         
         user_message = data['user_message']
-        session_id = get_or_create_session_id()
-        
-        print(f"   Session ID: {session_id}")
         print(f"   User message: \"{user_message}\"")
         
-        # Get chat history for context
-        session_data = get_chat_history(session_id)
-        conversation_context = format_conversation_context(session_data['messages'])
+        # Get conversation context from chat history
+        conversation_context = format_conversation_context()
         
         # Add conversation context to the user message
         contextual_message = conversation_context + user_message
         
         # Add user message to history
-        add_message_to_history(session_id, 'user', user_message)
+        add_message_to_history('user', user_message)
         
         # Khởi tạo chat session với system prompt
         chat_session = GEMINI_MODEL.start_chat(
@@ -250,15 +216,14 @@ def handle_chat_request():
         final_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, 'text') and part.text)
         
         # Add bot response to history
-        add_message_to_history(session_id, 'assistant', final_text)
+        add_message_to_history('assistant', final_text)
         
         print(f"🤖 [BACKEND - FINAL RESPONSE TO CLIENT]: \"{final_text}\"")
-        print(f"   Total messages in session: {len(session_data['messages'])}")
+        print(f"   Total messages in chat history: {len(chat_history)}")
         
         return jsonify({
             "bot_reply": final_text,
-            "session_id": session_id,
-            "message_count": len(session_data['messages'])
+            "message_count": len(chat_history)
         })
         
     except Exception as e:
@@ -266,52 +231,38 @@ def handle_chat_request():
         import traceback; traceback.print_exc()
         return jsonify({"error": f"Lỗi máy chủ: {str(e)}"}), 500
 
-# New endpoint to get chat history
+# Simple endpoint to get chat history
 @app.route('/chat/history', methods=['GET'])
 def get_chat_history_endpoint():
     try:
-        session_id = get_or_create_session_id()
-        session_data = get_chat_history(session_id)
-        
         return jsonify({
-            "session_id": session_id,
-            "messages": session_data['messages'],
-            "created_at": session_data['created_at'].isoformat(),
-            "last_activity": session_data['last_activity'].isoformat()
+            "messages": chat_history,
+            "total_messages": len(chat_history)
         })
     except Exception as e:
         print(f"ERROR in /chat/history: {e}")
         return jsonify({"error": f"Lỗi máy chủ: {str(e)}"}), 500
 
-# New endpoint to clear chat history
+# Simple endpoint to clear chat history
 @app.route('/chat/clear', methods=['POST'])
-def clear_chat_history():
+def clear_chat_history_endpoint():
     try:
-        session_id = get_or_create_session_id()
-        if session_id in chat_memory:
-            del chat_memory[session_id]
-            print(f"INFO: Chat history cleared for session {session_id}")
-        
+        clear_chat_history()
         return jsonify({
             "message": "Lịch sử trò chuyện đã được xóa",
-            "session_id": session_id
+            "total_messages": len(chat_history)
         })
     except Exception as e:
         print(f"ERROR in /chat/clear: {e}")
         return jsonify({"error": f"Lỗi máy chủ: {str(e)}"}), 500
 
-# New endpoint to get chat statistics
+# Simple endpoint to get chat statistics
 @app.route('/chat/stats', methods=['GET'])
 def get_chat_stats():
     try:
-        cleanup_expired_sessions()
-        total_sessions = len(chat_memory)
-        total_messages = sum(len(session_data['messages']) for session_data in chat_memory.values())
-        
         return jsonify({
-            "total_active_sessions": total_sessions,
-            "total_messages": total_messages,
-            "memory_expiry_hours": MEMORY_EXPIRY_HOURS
+            "total_messages": len(chat_history),
+            "max_messages": MAX_MESSAGES
         })
     except Exception as e:
         print(f"ERROR in /chat/stats: {e}")
@@ -328,5 +279,5 @@ def serve_static_files(path):
     return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
-    print("INFO: Starting Flask backend server with chat memory...")
+    print("INFO: Starting Flask backend server with simple list-based chat memory...")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
