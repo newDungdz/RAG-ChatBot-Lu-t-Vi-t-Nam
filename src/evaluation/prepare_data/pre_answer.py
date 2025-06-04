@@ -16,8 +16,8 @@ GEMINI_API_KEY_LIST = [
 ]
 
 # Model configuration
-MODEL_TYPE = "gemini-1.5-flash-8b"
-LOCAL_LLM = True
+MODEL_TYPE = "gemini-2.0-flash"
+LOCAL_LLM = False
 
 # Rate limiting configuration
 REQUEST_DELAY = 1.0  # Delay between requests in seconds

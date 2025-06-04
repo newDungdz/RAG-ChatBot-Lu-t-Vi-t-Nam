@@ -482,11 +482,11 @@ def save_to_json(data, output_path):
 if __name__ == "__main__":
     # Example usage with multiple API keys
     google_api_keys = [
-                "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-                "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-                "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8",
-                "AIzaSyAdis532XF3hKGdIlZ7PjvT0U4pi1FhWDw",
-                "AIzaSyA8HYpppKJ84wAveUCdeMy6mTgETPNbQmw",
+        "AIzaSyDW3hbx6Lt8gCjwT8rs_t_u0AEkB6T3k8A",
+        "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
+        "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
+        "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8",
+        "AIzaSyAdis532XF3hKGdIlZ7PjvT0U4pi1FhWDw",
     ]
 
     # Filter out placeholder keys
@@ -496,7 +496,7 @@ if __name__ == "__main__":
         print("⚠️ WARNING: Please replace placeholder API keys with your actual Google API keys.")
         valid_api_keys = ["AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8"]  # Fallback to original key
 
-    dataset = read_json_file("data/evalations/answer_evaluation/answers_gemini.json")
+    dataset = read_json_file("gemini_real_answer.json")
     # dataset = dataset[:100]
     print("🔧 Initializing RAGAS Evaluator with API Key Rotation...")
     try:
