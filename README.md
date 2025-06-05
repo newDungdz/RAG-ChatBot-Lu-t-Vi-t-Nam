@@ -1,3 +1,6 @@
+Link Google Drive:
+https://drive.google.com/drive/folders/10aCBigAKkBziuXMHkBcd70D96c3vAqDM
+
 Hướng dẫn sử dụng:
 
 Các quy định:
