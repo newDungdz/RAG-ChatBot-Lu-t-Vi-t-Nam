@@ -1,27 +1,11 @@
 import json
 import time
 import requests
-import google.generativeai as genai
 import random, re, os
 import subprocess
 from ollama import Client
 from tqdm import tqdm
 
-# API Keys configuration
-GEMINI_API_KEY_LIST = [
-    "AIzaSyBq4HTkU_PWUyHh7NmOuFPSjgzMQI86CCo",
-    "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-    "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-    "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8"
-]
-
-# Model configuration
-MODEL_TYPE = "gemini-2.0-flash"
-LOCAL_LLM = False
-
-# Rate limiting configuration
-REQUEST_DELAY = 1.0  # Delay between requests in seconds
-REQUESTS_PER_KEY = 5  # Switch API key after this many requests
 def generate_prompt(query, retrieval_results):
     """
     Generate Prompt for the LLM
@@ -81,21 +65,6 @@ def run_ollama(prompt, client: Client, model="llama3:8b-instruct-q4_K_M"):
         print(f"Lỗi khi chạy ollama: {e}")
         return None
 
-def rag_gemini_response(query, retrieval_results, model_type, api_key):
-    """
-    Generate response using Gemini with specified API key and model.
-    """
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(model_type)
-    
-    prompt = generate_prompt(query, retrieval_results)
-    
-    # Generate answer with Gemini
-    response = model.generate_content(prompt)
-    answer = response.text.strip()
-    
-    return answer
-
 def read_json_file(json_file_path: str):
     """Read JSON file and return data."""
     with open(json_file_path, "r", encoding="utf-8") as file:
@@ -106,96 +75,6 @@ def save_to_json(data, output_path):
     """Save data to JSON file."""
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
-def process_questions_gemini(retrieval_data, max_questions=None):
-    """
-    Process questions using single process with API key rotation.
-    """
-    questions = retrieval_data
-    if max_questions:
-        questions = questions[:max_questions]
-    
-    print(f"Processing {len(questions)} questions with single process")
-    print(f"Using model: {MODEL_TYPE}")
-    
-    # Initialize variables for API key rotation
-    current_api_key_idx = 0
-    request_count = 0
-    
-    results = []
-    successful = 0
-    failed = 0
-    
-    
-    for i, data in enumerate(questions):
-        question = data["question"]
-        retrieval_results = data["relevant_chunks"]
-        
-        print(f"Processing question {i+1}/{len(questions)}")
-        
-        # Apply rate limiting delay
-        time.sleep(REQUEST_DELAY + random.uniform(0, 0.5))  # Add some jitter
-        
-        # Check if we need to switch API key
-        if request_count >= REQUESTS_PER_KEY:
-            current_api_key_idx = (current_api_key_idx + 1) % len(GEMINI_API_KEY_LIST)
-            request_count = 0
-            print(f"Switched to API key index: {current_api_key_idx}")
-        
-        current_api_key = GEMINI_API_KEY_LIST[current_api_key_idx]
-        
-        # Process the question
-        begin_time = time.time()
-        try:
-            answer = rag_gemini_response(question, retrieval_results, MODEL_TYPE, current_api_key)
-            generation_time = time.time() - begin_time
-            
-            result = {
-                'task_id': i,
-                'question': question,
-                'truth_answer': data['answer'],
-                'model': MODEL_TYPE,
-                'api_key_index': current_api_key_idx,
-                'generated_answer': answer,
-                'generation_time': generation_time,
-                'status': 'success',
-                'contexts' : retrieval_results
-            }
-            
-            successful += 1
-            request_count += 1
-            print(f"Completed question {i+1} (Request #{request_count})")
-            
-        except Exception as e:
-            result = {
-                'task_id': i,
-                'question': question,
-                'truth_answer': data['answer'],
-                'model': MODEL_TYPE,
-                'api_key_index': current_api_key_idx,
-                'generated_answer': None,
-                'generation_time': time.time() - begin_time,
-                'status': 'error',
-                'error': str(e),
-                'contexts' : retrieval_results
-            }
-            failed += 1
-            print(f"Error on question {i+1}: {e}")
-        
-        results.append(result)
-        
-        # Progress update every 5 questions
-        if (i + 1) % 5 == 0:
-            print(f"Progress: {i+1}/{len(questions)} questions completed")
-    
-    # Print summary
-    print("\n=== Processing Summary ===")
-    print(f"Total questions: {len(results)}")
-    print(f"Successful: {successful}")
-    print(f"Failed: {failed}")
-    print(f"Success rate: {successful/len(results)*100:.1f}%")
-    
-    return results
 
 def process_question_local_llm(retrieval_data, model_type="llama3:8b-instruct-q4_K_M", max_questions=None):
     """
@@ -288,12 +167,6 @@ def process_question_local_llm(retrieval_data, model_type="llama3:8b-instruct-q4
 
 def main():
     """Main function to run the single process RAG system."""
-    print("Starting Single Process Gemini RAG System")
-    print(f"Using model: {MODEL_TYPE}")
-    print(f"API keys available: {len(GEMINI_API_KEY_LIST)}")
-    print(f"Rate limit delay: {REQUEST_DELAY}s per request")
-    print(f"Key rotation: every {REQUESTS_PER_KEY} requests")
-    
     
     # Load retrieval data
     try:
@@ -325,17 +198,11 @@ def main():
     # print(answer_data)
     print(len(process_data))
     start_time = time.time()
-    if LOCAL_LLM:
-        results = process_question_local_llm(
-            process_data, 
-            max_questions=max_questions,
-            model_type="llama3.1:8b-instruct-q4_K_M"
-        )
-    else:
-        results = process_questions_gemini(
-            process_data, 
-            max_questions=max_questions
-        )
+    results = process_question_local_llm(
+        process_data, 
+        max_questions=max_questions,
+        model_type="llama3.1:8b-instruct-q4_K_M"
+    )
 
     total_time = time.time() - start_time
     
@@ -365,10 +232,7 @@ def main():
         save_data.append(new_data)
     save_data = sorted(save_data, key=lambda x: x['id'])
     # Save results
-    if LOCAL_LLM:
-        output_filename = "answers_local_llm.json"
-    else:
-        output_filename = "answers_gemini.json"
+    output_filename = "answers_local_llm.json"
     save_to_json(save_data, output_filename)
     
     print(f"\n=== Final Results ===")
