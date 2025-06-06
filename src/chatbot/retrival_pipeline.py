@@ -1,13 +1,12 @@
 
 from sentence_transformers import SentenceTransformer
-from elasticsearch import Elasticsearch
 import json, os
 import google.generativeai as genai
 import logging
 from typing import Dict
 import time
 
-CLOUD_ID="Legal_RAG_data:YXNpYS1zb3V0aGVhc3QxLmdjcC5lbGFzdGljLWNsb3VkLmNvbTo0NDMkYWJhZmZjOGQxNjA3NGY0Y2EwMzc4NGFhNDdlMmM1MjckNzg2YjMzY2I1NGFjNDNiZTg1NTljZDgxNTJlODJmNDA="
+
 
 law_category_contexts = [
     "[linh-vuc-khac] -> [Lĩnh vực khác] : Các quy định pháp luật không thuộc các lĩnh vực đã được phân loại cụ thể, hoặc các vấn đề pháp lý mới phát sinh chưa được xếp vào ngành luật nào.",
@@ -104,7 +103,7 @@ law_categoies = [
 ]
 
 class RAGLawRetrieval:
-    def __init__(self, es_host='localhost', es_port=9200, es_index='chunks', 
+    def __init__(self, es_client, es_index='chunks', 
                 embedding_model='VoVanPhuc/sup-SimCSE-VietNamese-phobert-base', query_process_model = 'meta-llama/llama-3.3-8b-instruct:free'):
         """
         Initialize the Elasticsearch Legal Retrieval Flow
@@ -122,17 +121,9 @@ class RAGLawRetrieval:
         classify_tech : str
             Choose LLM or bert model for query classification ('llm', 'bert')
         """
-        # Connect to Elasticsearch
-        if (os.getenv('LOCAL_MODE', True)):
-            self.es = Elasticsearch([{'host': os.getenv('ELASTICSEARCH_HOST', es_host), 'port': int(os.getenv('ELASTICSEARCH_PORT', 9200)), 'scheme': 'http'}])
-        else:
-            self.es = Elasticsearch(
-                cloud_id=CLOUD_ID,
-                api_key=("lQRSIZcBDy4SfGpi8c3q", "iKwdTKOvjEz31ahN9r7eug")
-        )
 
         self.index_name = es_index
-        
+        self.es = es_client
         # Get legal categories from Elasticsearch
         self.legal_categories_fulltext = self._get_legal_categories()
         self.legal_categories = law_categoies

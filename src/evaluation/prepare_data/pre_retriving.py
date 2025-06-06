@@ -72,8 +72,8 @@ if __name__ == "__main__":
     BATCH_DELAY = 0.0  # additional delay between batches (seconds)
     
     # Initialize the retrieval flow with Elasticsearch connection
-    # query_data = sorted(read_json_file("data/json_data/QnA/processed_qna_data.json"), key=lambda x: x['id'])
-    query_data = sorted(read_json_file("classified_query.json"), key=lambda x: x['id'])
+    query_data = sorted(read_json_file("data/json_data/QnA/processed_qna_data.json"), key=lambda x: x['id'])
+    # query_data = sorted(read_json_file("classified_query.json"), key=lambda x: x['id'])
     
     # Process queries with detailed timing tracking and rate limiting
     # preload_data = sorted(read_json_file("pre_retrive_query_with_timing.json"), key=lambda x: x['id'])

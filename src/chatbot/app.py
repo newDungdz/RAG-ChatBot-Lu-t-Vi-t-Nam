@@ -7,7 +7,13 @@ import os
 import json
 from datetime import datetime
 from retrival_pipeline import RAGLawRetrieval
+import re
+from elasticsearch import Elasticsearch
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 app = Flask(__name__, static_folder='static', static_url_path='')
 CORS(app)
 
@@ -64,7 +70,7 @@ except KeyError:
 
 # --- ĐỊNH NGHĨA SYSTEM PROMPT ---
 SYSTEM_PROMPT = """Bạn là một trợ lý pháp lý. Hãy trả lời toàn diện câu hỏi pháp lý sau, chỉ dựa trên các văn bản pháp lý được cung cấp. 
-Khi nhận được các văn bản pháp lý cần thiết, hãy xây dụng câu trả lời bằng cách suy luận từng bước theo hướng dẫn.
+Khi người dùng cần tư vấn , sử dụng tools get_specific_law_article_info để lấy các văn bản pháp luật liên quan, sau đó hãy xây dụng câu trả lời bằng cách suy luận từng bước theo hướng dẫn.
 
 Bạn có thể tham khảo lịch sử cuộc trò chuyện để hiểu rõ hơn ngữ cảnh của câu hỏi hiện tại.
 
@@ -75,24 +81,37 @@ HƯỚNG DẪN:
 4. **Bước 4 - Kết luận ngắn gọn:** Sau phần phân tích chi tiết, hãy đưa ra một câu trả lời tóm tắt, súc tích để tổng hợp lại nội dung chính và đưa ra kết luận pháp lý. 
 
 YÊU CẦU:
-- Sau toàn bộ câu trả lời, ghi ra các phải ghi trực tiếp link web ( Được cho bởi tools truy vấn dữ liệu ) của văn bản sử dụng trong câu trả lời để người dùng có thể tra cứu, viết như sau:
+- Sau toàn bộ câu trả lời, ghi ra các link web của văn bản pháp lý được sử dụng trong câu trả lời để người dùng có thể tra cứu, với định dạng:
   "
   Bạn có thể kiểm tra các văn bản pháp luật liên quan tại đây:
-  + Luật Đầu tư năm 2014: https://luatvietnam.vn/dau-tu/luat-dau-tu-2014-91358-d1.html
-  + "Luật Kinh doanh bất động sản 2014: https://luatvietnam.vn/dat-dai/luat-kinh-doanh-bat-dong-san-cua-quoc-hoi-so-66-2014-qh13-91353-d1.html
-  ....
-"
+  + [Tên văn bản]: [Link URL]
+  + [Tên văn bản]: [Link URL]
+  "
 - Không sử dụng bất kỳ kiến thức nào nằm ngoài các văn bản được cung cấp.
 - Phải trích dẫn rõ ràng điều luật/khoản/mục trong văn bản. Khi nêu tên 1 văn bản pháp luật, 
 - Không suy diễn hoặc bổ sung thông tin pháp lý không có trong văn bản.
 - Cấu trúc câu trả lời bao gồm các kết quả suy luận từ các bước hướng dẫn, với các xây dụng câu tự nhiên, giống như người thật giải thích
 """
 
+def setup_es_client():
+    CLOUD_ID="Legal_RAG_data:YXNpYS1zb3V0aGVhc3QxLmdjcC5lbGFzdGljLWNsb3VkLmNvbTo0NDMkYWJhZmZjOGQxNjA3NGY0Y2EwMzc4NGFhNDdlMmM1MjckNzg2YjMzY2I1NGFjNDNiZTg1NTljZDgxNTJlODJmNDA="
+    
+    # Connect to Elasticsearch
+    if (os.environ.get('LOCAL_MODE', 'True').lower() in ('true', '1', 'yes')):
+        es = Elasticsearch([{'host': os.environ.get('ELASTICSEARCH_HOST', "elasticsearch"), 'port': int(os.environ.get('ELASTICSEARCH_PORT', 9200)), 'scheme': 'http'}])
+        print(f"LOCAL_MODE bật, kết nối với elasticsearch local thành công với {os.environ.get('ELASTICSEARCH_HOST', 'elasticsearch')} , {os.environ.get('ELASTICSEARCH_PORT', '9200')}")
+    else:
+        es = Elasticsearch(
+            cloud_id=CLOUD_ID,
+            api_key=("lQRSIZcBDy4SfGpi8c3q", "iKwdTKOvjEz31ahN9r7eug")
+        )
+        print(f"LOCAL_MODE tắt, kết nối với elasticsearch cloud thành công với {CLOUD_ID}")
+    return es
+
 retrieval_flow = RAGLawRetrieval(
-    es_host='localhost',
-    es_port=9200,
+    es_client=setup_es_client(),
     embedding_model = 'intfloat/multilingual-e5-small',
-    query_process_model='gemini-2.0-flash',
+    query_process_model='gemini-2.0-flash-lite',
     # es_index='chunks_intfloat_multilingual-e5-small',
 )
 
@@ -120,8 +139,10 @@ def get_law_article_details_implementation(query):
 # Khai báo Tool cho Gemini (giữ nguyên phần này)
 get_law_article_tool_declaration = genai.protos.FunctionDeclaration(
     name="get_specific_law_article_info",
-    description="""Lấy thông tin chi tiết của các điều luật liên quan đến câu hỏi của người dùng
-    , dùng mọi khi người dùng cần tư vấn ở bất kỳ câu hỏi nào""",
+    description="""
+    Lấy thông tin chi tiết của các điều luật liên quan đến câu hỏi của người dùng
+    , dùng mọi khi người dùng cần tư vấn ở bất kỳ câu hỏi nào
+    """,
     parameters=genai.protos.Schema(
         type=genai.protos.Type.OBJECT,
         properties={
@@ -148,7 +169,30 @@ try:
 except Exception as e:
     print(f"CRITICAL ERROR: Could not initialize Gemini Model '{MODEL_NAME_TO_USE}': {e}")
 
-# API Endpoint cho Chat với Simple List Memory
+# Add this function to your app.py
+
+def remove_duplicate_urls(text):
+    """
+    Remove duplicate URLs in Markdown links where the URL appears as both text and link
+    Example: 
+    "[https://example.com](https://example.com)" 
+    becomes 
+    "https://example.com"
+    """
+    if not text:
+        return text
+    
+    # Pattern to match Markdown links where URL is duplicated as text and link
+    # [URL](URL) -> URL
+    markdown_duplicate_pattern = r'\[(https?://[^\]]+)\]\(\1\)'
+    
+    # Replace duplicated Markdown links with just the URL
+    cleaned_text = re.sub(markdown_duplicate_pattern, r'\1', text)
+    
+    return cleaned_text
+
+
+# Update your /chat endpoint
 @app.route('/chat', methods=['POST'])
 def handle_chat_request():
     print("\n--- [BACKEND PYTHON - /chat ENDPOINT]: Received new request ---")
@@ -214,6 +258,10 @@ def handle_chat_request():
                 break
         
         final_text = "".join(part.text for part in response.candidates[0].content.parts if hasattr(part, 'text') and part.text)
+        
+        # POST-PROCESSING: Remove duplicate links
+        final_text = remove_duplicate_urls(final_text)
+        print(f"🧹 [POST-PROCESSING]: Duplicate links removed")
         
         # Add bot response to history
         add_message_to_history('assistant', final_text)

@@ -6,6 +6,24 @@ import subprocess
 from ollama import Client
 from tqdm import tqdm
 
+<<<<<<< Updated upstream:src/evaluation/prepare_data/pre_answer_local_llm.py
+=======
+# API Keys configuration
+GEMINI_API_KEY_LIST = [
+    "AIzaSyBq4HTkU_PWUyHh7NmOuFPSjgzMQI86CCo",
+    "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
+    "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
+    "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8"
+]
+
+# Model configuration
+MODEL_TYPE = "gemini-2.0-flash"
+LOCAL_LLM = True
+
+# Rate limiting configuration
+REQUEST_DELAY = 1.0  # Delay between requests in seconds
+REQUESTS_PER_KEY = 5  # Switch API key after this many requests
+>>>>>>> Stashed changes:src/evaluation/prepare_data/pre_answer.py
 def generate_prompt(query, retrieval_results):
     """
     Generate Prompt for the LLM
@@ -153,8 +171,9 @@ def process_question_local_llm(retrieval_data, model_type="llama3:8b-instruct-q4
         results.append(result)
         
         # Progress update every 5 questions
-        if (i + 1) % 5 == 0:
-            print(f"Progress: {i+1}/{len(questions)} questions completed")
+        if (i + 1) % 10 == 0:
+            save_to_json(results, "backup.json")
+            # print(f"Progress: {i+1}/{len(questions)} questions completed")
     
     # Print summary
     print("\n=== Processing Summary ===")
@@ -170,7 +189,7 @@ def main():
     
     # Load retrieval data
     try:
-        retrieval_data = read_json_file("data/evaluation/answer_evaluation/query_with_truth.json")
+        retrieval_data = read_json_file("data/evaluation/query_with_truth.json")
         print(f"Loaded {len(retrieval_data)} questions")
     except FileNotFoundError:
         print("Error: query_with_truth.json not found")
@@ -180,7 +199,7 @@ def main():
     
     # Process questions with single process
     max_questions = None  # Limit for testing, set to None for all questions
-    retrieval_data = retrieval_data[150:]
+    retrieval_data = retrieval_data[150:151]
         
     # answered_data = read_json_file("answers_local_llm.json")
     # question_datas = {data['question']: data for data in answered_data}
