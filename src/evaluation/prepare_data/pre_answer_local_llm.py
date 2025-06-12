@@ -2,28 +2,8 @@ import json
 import time
 import requests
 import random, re, os
-import subprocess
-from ollama import Client
 from tqdm import tqdm
 
-<<<<<<< Updated upstream:src/evaluation/prepare_data/pre_answer_local_llm.py
-=======
-# API Keys configuration
-GEMINI_API_KEY_LIST = [
-    "AIzaSyBq4HTkU_PWUyHh7NmOuFPSjgzMQI86CCo",
-    "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-    "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-    "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8"
-]
-
-# Model configuration
-MODEL_TYPE = "gemini-2.0-flash"
-LOCAL_LLM = True
-
-# Rate limiting configuration
-REQUEST_DELAY = 1.0  # Delay between requests in seconds
-REQUESTS_PER_KEY = 5  # Switch API key after this many requests
->>>>>>> Stashed changes:src/evaluation/prepare_data/pre_answer.py
 def generate_prompt(query, retrieval_results):
     """
     Generate Prompt for the LLM
@@ -64,23 +44,37 @@ def generate_prompt(query, retrieval_results):
     print(f"Query have {token_count} tokens")
     return prompt
 
-def run_ollama(prompt, client: Client, model="llama3:8b-instruct-q4_K_M"):
+def run_ollama(prompt, model="llama3.1:8b-instruct-q4_K_M", temperature=0.1):
     """
-    Chạy Ollama với prompt đã cho sử dụng Ollama Python client
+    Phương pháp thay thế sử dụng Python requests (cần cài đặt: pip install requests)
     """
     try:
-        # Sử dụng Ollama client để gửi prompt
-        chat_completion = client.chat(
-            messages=[{"role": "user", "content": prompt}],
-            model=model,
-            options={"temperature": 0.3}  # Có thể điều chỉnh temperature theo nhu cầu
+        
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "options": {"temperature": temperature}
+        }
+        
+        response = requests.post(
+            "http://localhost:11434/api/chat",
+            json=payload,
+            timeout=300
         )
         
-        # Trả về response từ model
-        return chat_completion["message"]["content"].strip()
+        if response.status_code != 200:
+            print(f"Lỗi HTTP {response.status_code}: {response.text}")
+            return None
+            
+        response_data = response.json()
+        return response_data["message"]["content"].strip()
         
+    except ImportError:
+        print("Lỗi: Cần cài đặt requests library: pip install requests")
+        return None
     except Exception as e:
-        print(f"Lỗi khi chạy ollama: {e}")
+        print(f"Lỗi requests method: {e}")
         return None
 
 def read_json_file(json_file_path: str):
@@ -108,7 +102,6 @@ def process_question_local_llm(retrieval_data, model_type="llama3:8b-instruct-q4
     results = []
     successful = 0
     failed = 0
-    ollama_client = Client()
     for i, data in tqdm(enumerate(questions), "Processing question", len(questions)):
         question = data["question"]
         retrieval_results = data["relevant_chunks"]
@@ -119,7 +112,7 @@ def process_question_local_llm(retrieval_data, model_type="llama3:8b-instruct-q4
         # Process the question
         begin_time = time.time()
         try:
-            answer = run_ollama(prompt, ollama_client, model_type)
+            answer = run_ollama(prompt, model_type)
             generation_time = time.time() - begin_time
             
             if answer is not None:
@@ -199,7 +192,7 @@ def main():
     
     # Process questions with single process
     max_questions = None  # Limit for testing, set to None for all questions
-    retrieval_data = retrieval_data[150:151]
+    retrieval_data = retrieval_data[220:]
         
     # answered_data = read_json_file("answers_local_llm.json")
     # question_datas = {data['question']: data for data in answered_data}
