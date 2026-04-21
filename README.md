@@ -1,6 +1,6 @@
 ## Giới thiệu Tổng quan hệ thống
 
-Dự án này xây dựng một hệ thống **Retrieval-Augmented Generation (RAG)** cho **văn bản pháp luật tiếng Việt**, tập trung vào **chất lượng truy hồi**, **thiết kế cấu trúc dữ liệu**, và **độ tin cậy của pipeline**, thay vì tối ưu prompt hay sinh văn bản đầu ra.
+Dự án này xây dựng một hệ thống **Retrieval-Augmented Generation (RAG)** cho văn bản pháp luật tiếng Việt lấy từ https://luatvietnam.vn/.
 
 Mục tiêu chính là tạo ra một **lớp truy hồi ngữ nghĩa chính xác và có thể kiểm soát**, phù hợp với các văn bản pháp luật có cấu trúc phân cấp phức tạp (Chương – Điều – Khoản), nơi yêu cầu cao về tính đúng đắn và khả năng truy vết nguồn.
 
@@ -30,17 +30,9 @@ GOOGLE_API_KEY= < Gemini API Key của bạn >
 FLASK_ENV=development
 ELASTICSEARCH_HOST=elasticsearch
 ELASTICSEARCH_PORT=9200
-LOCAL_MODE=True ( False nếu dùng Elasticsearch Cloud )
+LOCAL_MODE=True
 
-
-
-Nếu sử dụng Elasticsearch Cloud ( Không còn khả dụng ):
-- Vào src/chatbot/.env, chỉnh LOCAL_MODE = False
-- Comment container elasticsearch ở trong docker-compose.yml
-- Chạy docker-compose up --build
-- Khi xong, mở link được hiện trên log của docker ( mặc định http://localhost:5000 )
-
-Nếu dung Elasticsearch Local
+Với Elasticsearch Local
 - Vào src/chatbot/.env, chỉnh LOCAL_MODE = True
 - Lên link Google Drive này: https://drive.google.com/drive/folders/176TyeZvesvSbiMOnK3cTo8hBISdtJfgL
 - Chọn 1 file json tùy ý ( Khuyên chọn file chunks_embeddings_intfloat_multilingual-e5-small.json )
@@ -50,12 +42,15 @@ Nếu dung Elasticsearch Local
 
 - Chạy docker-compose up --build để mở elasticsearch
 - Vào src/elasticsearch/upload_data, chỉnh JSON_FILE_PATH đúng với file vừa tải về, và chạy. ( Cần lib của elasticsearch, chưa có thì chạy pip install elasticsearch ) để đưa data lên elasticsearch
-- Nếu muốn kiểm trả hãy bỏ comment container kibana trước khi chạy docker-compose, và kiểm tra đã có index nào chưa.
+- Nếu muốn truy cập, phân tích dữ liệu hãy bỏ comment container kibana trước khi chạy docker-compose để có thể truy cập vào kibana.
 - Khi xong, mở link được hiện trên log của docker ( mặc định http://localhost:5000 )
 
 
-Link Google Drive Chi tiết Project:
-https://drive.google.com/drive/folders/10aCBigAKkBziuXMHkBcd70D96c3vAqDM
+Link Google Drive Project: https://drive.google.com/drive/folders/10aCBigAKkBziuXMHkBcd70D96c3vAqDM
+Trong Drive có chi tiết các tài liệu của project, gồm có:
+- Dataset: raw dataset và dataset đã được xử lý, chunking.
+- Video cài đặt và video demo.
+- Báo cáo chi tiết về project.
 
 Link Báo cáo:
 https://docs.google.com/document/d/1RaDzGh5KaLjDyYfc6lCLI4380iur3DR4d6obFOoL7lo/edit?usp=sharing
