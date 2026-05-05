@@ -13,8 +13,7 @@ options.add_argument("--headless=new")  # new headless mode
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument("--window-size=1920,1080")
 
-driver = webdriver.Chrome(service=Service("chromedriver.exe"), options=options)
-
+driver = webdriver.Chrome(options=options)
 # Stealth mode
 stealth(driver,
     languages=["en-US", "en"],
@@ -27,10 +26,13 @@ stealth(driver,
 
 # Luật DocTypeID = 10, Bộ luật DocTypeID = 58, Nghị định DocTypeID = 11
 
+doc_type_id = 10
+store_json  = "luat_links.json"
+
 base_url = "https://luatvietnam.vn/van-ban-luat-viet-nam.html"
 doc_base_url = "https://luatvietnam.vn"
 def scrape_page(page_number):
-    url = f"{base_url}?OrderBy=0&keywords=&lFieldId=&EffectStatusId=0&DocTypeId=11&OrganId=0&page={page_number}&pSize=20&ShowSapo=0"
+    url = f"{base_url}?OrderBy=0&keywords=&lFieldId=&EffectStatusId=0&DocTypeId={doc_type_id}&OrganId=0&page={page_number}&pSize=20&ShowSapo=0"
     driver.get(url)
     time.sleep(3)  # Wait for JavaScript to load content
 
@@ -57,7 +59,7 @@ def scrape_page(page_number):
 # Crawl multiple pages and assign unique IDs
 all_documents = []
 doc_id = 1
-total_pages = 240  # Set this to the actual number of pages you want to scrape
+total_pages = 2  # Set this to the actual number of pages you want to scrape
 total_docs = 0
 
 # tqdm loop
@@ -75,7 +77,6 @@ with tqdm(range(1, total_pages + 1), desc="Crawling pages", unit="page") as pbar
 
         # time.sleep(random.uniform(2, 5))
 
-store_json  = "nghi_dinh_links.json"
 # Save to JSON file
 try:
     # Load existing data if the file exists

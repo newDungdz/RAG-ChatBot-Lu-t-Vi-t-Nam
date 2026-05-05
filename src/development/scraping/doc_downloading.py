@@ -9,8 +9,10 @@ from concurrent.futures import ThreadPoolExecutor
 # Document type
 doc_type = "luat"
 
+link_json = "data/json_data/links/download_link/luat_download.json"
+
 # Load document links
-with open(f"data\\json_data\\download_link\\{doc_type}_download.json", "r", encoding="utf-8") as file:
+with open(link_json, "r", encoding="utf-8") as file:
     documents = json.load(file)
 
 # Output folder
@@ -76,11 +78,11 @@ def download_document(doc):
 
         header = response.headers.get("Content-Disposition")
         filename = extract_filename_from_header(header) or os.path.basename(url)
-        filepath = output_dir / filename
+        # filepath = output_dir / filename
 
-        with open(filepath, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+        # with open(filepath, "wb") as f:
+        #     for chunk in response.iter_content(chunk_size=8192):
+        #         f.write(chunk)
 
         new_data.append({
             "title": doc["title"],

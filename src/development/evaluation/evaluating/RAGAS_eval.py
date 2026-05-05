@@ -1,4 +1,5 @@
 import json
+import os
 import pandas as pd
 import numpy as np
 from typing import List, Dict, Any
@@ -480,28 +481,18 @@ def save_to_json(data, output_path):
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
+    from dotenv import load_dotenv
+    # Load environment variables from .env file
+    load_dotenv()
     # Example usage with multiple API keys
-    google_api_keys = [
-        "AIzaSyDW3hbx6Lt8gCjwT8rs_t_u0AEkB6T3k8A",
-        "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-        "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-        "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8",
-        "AIzaSyAdis532XF3hKGdIlZ7PjvT0U4pi1FhWDw",
-    ]
-
-    # Filter out placeholder keys
-    valid_api_keys = [key for key in google_api_keys if not key.startswith("YOUR_") and key != ""]
-
-    if not valid_api_keys:
-        print("⚠️ WARNING: Please replace placeholder API keys with your actual Google API keys.")
-        valid_api_keys = ["AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8"]  # Fallback to original key
+    google_api_keys = os.environ.get("GOOGLE_API_KEY_LIST", "").split(",")
 
     dataset = read_json_file("answers_mistral_openrouter.json")
     # dataset = dataset[:100]
     print("🔧 Initializing RAGAS Evaluator with API Key Rotation...")
     try:
         evaluator = RAGASEvaluator(
-            google_api_keys=valid_api_keys,
+            google_api_keys=google_api_keys,
             use_google_embeddings=False,
             embedding_model_name="VoVanPhuc/sup-SimCSE-VietNamese-phobert-base"
         )

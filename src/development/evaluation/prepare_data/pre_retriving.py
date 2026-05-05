@@ -45,7 +45,7 @@ def process_single_query(query):
         'original_query': query['question'],
         'expanded_query': query['expanded_query']
     }
-    results = retrieval_flow.process_query(query, top_k_categories=2, top_bm25=50, top_k_chunks=20)
+    results = retrieval_flow.process_query(query, top_k_categories=2, top_bm25=100, top_k_chunks=5)
     query['expanded_query'] = results['step0_query_expansion']
     query['retrival_time'] = round(time.time() - query_start_time, 4)
     
@@ -72,8 +72,8 @@ if __name__ == "__main__":
     BATCH_DELAY = 0.0  # additional delay between batches (seconds)
     
     # Initialize the retrieval flow with Elasticsearch connection
-    query_data = sorted(read_json_file("data/json_data/QnA/processed_qna_data.json"), key=lambda x: x['id'])
-    # query_data = sorted(read_json_file("classified_query.json"), key=lambda x: x['id'])
+    # query_data = sorted(read_json_file("data/json_data/QnA/processed_qna_data.json"), key=lambda x: x['id'])
+    query_data = sorted(read_json_file("data\/evaluation/retrival_evaluation/classified_query.json"), key=lambda x: x['id'])
     
     # Process queries with detailed timing tracking and rate limiting
     # preload_data = sorted(read_json_file("pre_retrive_query_with_timing.json"), key=lambda x: x['id'])

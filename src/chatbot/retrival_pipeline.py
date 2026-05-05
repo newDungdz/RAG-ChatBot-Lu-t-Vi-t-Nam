@@ -1,4 +1,3 @@
-
 from sentence_transformers import SentenceTransformer
 import json, os
 import google.generativeai as genai

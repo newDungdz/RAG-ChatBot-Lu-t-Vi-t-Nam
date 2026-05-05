@@ -16,7 +16,7 @@ options.add_argument("--headless=new")  # new headless mode
 options.add_argument("--disable-blink-features=AutomationControlled")
 options.add_argument("--window-size=1920,1080")
 
-driver = webdriver.Chrome(service=Service("chromedriver.exe"), options=options)
+driver = webdriver.Chrome(options=options)
 
 # Stealth mode
 stealth(driver,
@@ -87,7 +87,7 @@ def scrape_page(page_number):
 # Crawl multiple pages and assign unique IDs
 all_qna = []
 doc_id = 1
-total_pages =  88 # Set this to the total number of pages you want to scrape
+total_pages = 100 # Set this to the total number of pages you want to scrape
 
 for page in range(1, total_pages + 1):
     print(f"Scraping page {page}...")

@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 import time
 
 # Cấu hình
-JSON_INPUT_FILE = "bo_luat_links.json"
-JSON_OUTPUT_FILE = "bo_luat_links_down.json"
+JSON_INPUT_FILE = "data/json_data/links/law_link/luat_links.json"
+JSON_OUTPUT_FILE = "luat_links_down.json"
 HOME_URL = "https://luatvietnam.vn"
 LOGIN_URL = "https://luatvietnam.vn/Account/DoLogin"
 HEADERS = {
