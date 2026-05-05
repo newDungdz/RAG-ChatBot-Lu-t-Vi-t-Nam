@@ -1,36 +1,118 @@
-Link Google Drive:
+# System Overview
+
+This project builds a Retrieval-Augmented Generation (RAG) system for Vietnamese legal documents sourced from:
+https://luatvietnam.vn/
+
+The main objective is to create a precise and controllable semantic retrieval layer, tailored for legal texts with complex hierarchical structures (Chapter – Article – Clause), where accuracy and traceability are critical.
+
+<img width="1200" height="585" alt="Data Processing Pipeline" src="https://github.com/user-attachments/assets/6c618a52-08ae-4afe-b857-e8792dfb0e44" />
+<p align="center">
+  <em>Figure 1: Dataset Processing Pipeline</em>
+</p>
+<img width="1084" height="652" alt=" RAG System Architecture" src="https://github.com/user-attachments/assets/b60f45de-57cb-4ddb-8f79-8dc7db9538ee" />
+<p align="center">
+  <em>Figure 2: RAG System Architecture</em>
+</p>
+---
+
+# Usage Guide
+
+## Requirements
+
+- Python environment (e.g., VSCode)
+- Docker installed
+
+---
+
+## Environment Setup
+
+Create a file named `.env` inside `src/chatbot` with the following content:
+```env
+GOOGLE_API_KEY=<your Gemini API Key>  
+FLASK_ENV=development  
+ELASTICSEARCH_HOST=elasticsearch  
+ELASTICSEARCH_PORT=9200  
+LOCAL_MODE=True  
+```
+
+## Running Elasticsearch Locally
+
+1. Open the file:
+   src/chatbot/.env
+
+2. Set:
+   LOCAL_MODE=True
+
+3. Download dataset from Google Drive:
+   https://drive.google.com/drive/folders/176TyeZvesvSbiMOnK3cTo8hBISdtJfgL
+
+4. Choose any JSON file  
+   Recommended:
+   chunks_embeddings_intfloat_multilingual-e5-small.json
+
+5. Update the embedding model in your Dockerfile
+
+   Find this line:
+   ```docker
+   RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
+   ```
+   Replace the model name if you are using a different embedding model.
+
+
+## Start Elasticsearch
+
+Run:
+```bash
+docker-compose up --build
+```
+
+## Upload Data to Elasticsearch
+
+1. Navigate to:
+   src/elasticsearch/upload_data.py
+
+2. Open the script and update:
+   ```python
+   JSON_FILE_PATH
+   ```
+   Set it to the path of your downloaded JSON file.
+
+4. Install Elasticsearch Python client (if needed):
+```bash
+pip install elasticsearch
+```
+4. Run the script to upload data into Elasticsearch.
+
+## Optional: Enable Kibana
+
+- Open docker-compose.yml
+- Uncomment the Kibana container
+- Restart Docker
+
+You can now use Kibana to explore and analyze indexed data.
+
+## Access the Application
+
+After everything is running, open the URL shown in Docker logs.
+
+Default:
+http://localhost:5000
+
+---
+
+# Project Resources
+
+## Google Drive (Full Project)
+
 https://drive.google.com/drive/folders/10aCBigAKkBziuXMHkBcd70D96c3vAqDM
 
-Hướng dẫn sử dụng:
+Contents include:
+- Raw dataset and processed (chunked) dataset
+- Installation video and demo video
+- Detailed project documentation
 
-Các quy định:
+---
 
-- Có môi trường chạy python trên máy ( như VSCode )
-- Có Docker đã được tải về.
+## Project Report
 
-Tạo 1 file .env ở trong src/chatbot, ghi nội dung như sau:
-GOOGLE_API_KEY= < Gemini API Key của bạn >
-FLASK_ENV=development
-ELASTICSEARCH_HOST=elasticsearch
-ELASTICSEARCH_PORT=9200
-LOCAL_MODE=True ( False nếu dùng Elasticsearch Cloud )
-
-Nếu sử dụng Elasticsearch Cloud:
-
-- Vào src/chatbot/.env, chỉnh LOCAL_MODE = False
-- Comment container elasticsearch ở trong docker-compose.yml
-- Chạy docker-compose up --build
-- Khi xong, mở link được hiện trên log của docker ( mặc định http://localhost:5000 )
-
-Nếu dung Elasticsearch Local
-
-- Vào src/chatbot/.env, chỉnh LOCAL_MODE = True
-- Lên link Google Drive này: https://drive.google.com/drive/folders/176TyeZvesvSbiMOnK3cTo8hBISdtJfgL
-- Chọn 1 file json tùy ý ( Khuyên chọn file chunks_embeddings_intfloat_multilingual-e5-small.json )
-- Chỉnh trong src/chatbot/Dockerfile:
-  RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
-  thay 'intfloat/multilingual-e5-small' bằng mô hình embedding mà bạn dùng
-- Chạy docker-compose up --build để mở elasticsearch
-- Vào src/elasticsearch/upload_data, chỉnh JSON_FILE_PATH đúng với file vừa tải về, và chạy. ( Cần lib của elasticsearch, chưa có thì chạy pip install elasticsearch ) để đưa data lên elasticsearch
-- Nếu muốn kiểm trả hãy bỏ comment container kibana trước khi chạy docker-compose, và kiểm tra đã có index nào chưa.
-- Khi xong, mở link được hiện trên log của docker ( mặc định http://localhost:5000 )
+https://docs.google.com/document/d/1RaDzGh5KaLjDyYfc6lCLI4380iur3DR4d6obFOoL7lo/edit?usp=sharing
