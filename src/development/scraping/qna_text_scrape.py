@@ -1,19 +1,18 @@
 import json
 import time
 import sys
-import multiprocessing
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from tqdm import tqdm
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
-INPUT_FILE  = "data/json_data/QnA/QnA_links.json"
-OUTPUT_FILE = "data/json_data/QnA/QnA_data.json"
-MAX_CRAWL   = 15      # ← how many links to crawl
-NUM_WORKERS = 6      # ← how many parallel Chrome drivers
-DELAY       = 0      # seconds to wait after page load
+INPUT_FILE  = "QnA_links.json"
+OUTPUT_FILE = "QnA_data.json"
+MAX_CRAWL   = 2
+DELAY       = 0
 # ────────────────────────────────────────────────────────────────────────────
+
 
 def make_driver():
     options = Options()
@@ -34,9 +33,7 @@ def make_driver():
     return driver
 
 
-def crawl_article(url: str) -> dict:
-    """Each call spins up its own driver (safe for multiprocessing)."""
-    driver = make_driver()
+def crawl_article(driver, url: str) -> dict:
     try:
         driver.get(url)
         time.sleep(DELAY)
@@ -99,40 +96,25 @@ def crawl_article(url: str) -> dict:
     except Exception as e:
         return {"crawl_status": "error", "crawl_error": str(e)}
 
-    finally:
-        driver.quit()   # always close, even on error
-
-
-def crawl_item(item: dict) -> dict:
-    """Wrapper that merges the original item with crawl results — passed to Pool."""
-    pid = multiprocessing.current_process().name
-    # print(f"  [{pid}] crawling → {item['link']}")
-    enriched = crawl_article(item["link"])
-    return {**item, **enriched}
-
 
 def main():
-    max_crawl   = int(sys.argv[1]) if len(sys.argv) > 1 else MAX_CRAWL
-    num_workers = int(sys.argv[2]) if len(sys.argv) > 2 else NUM_WORKERS
+    max_crawl = int(sys.argv[1]) if len(sys.argv) > 1 else MAX_CRAWL
 
     with open(INPUT_FILE, encoding="utf-8") as f:
         items = json.load(f)
 
     to_crawl = items[:max_crawl]
-    print(f"Crawling {len(to_crawl)} items with {num_workers} parallel workers\n")
+    print(f"Crawling {len(to_crawl)} items sequentially (1 driver, 1 tab)\n")
 
-    # imap_unordered streams results as they finish (faster feedback)
-    # but we sort by original id at the end to keep stable output order
-    with multiprocessing.Pool(processes=num_workers) as pool:
-        results = list(tqdm(
-            pool.imap_unordered(crawl_item, to_crawl),
-            total=len(to_crawl),
-            desc="Crawling",
-            unit="page",
-        ))
+    driver  = make_driver()
+    results = []
 
-    # Restore original order
-    results.sort(key=lambda r: r["id"])
+    try:
+        for item in tqdm(to_crawl, desc="Crawling", unit="page"):
+            result = crawl_article(driver, item["link"])
+            results.append({**item, **result})
+    finally:
+        driver.quit()
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)

@@ -9,8 +9,6 @@ from datetime import datetime, timedelta
 import re
 
 
-
-
 options = Options()
 options.add_argument("--headless=new")  # new headless mode
 options.add_argument("--disable-blink-features=AutomationControlled")
