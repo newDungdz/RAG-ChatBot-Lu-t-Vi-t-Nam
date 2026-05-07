@@ -1,6 +1,7 @@
 selenium
 webdriver-manager
 selenium_stealth
+playwright
 bs4
 pandas
 python-docx

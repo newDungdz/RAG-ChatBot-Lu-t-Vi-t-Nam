@@ -1,14 +1,15 @@
 import json
 import asyncio
 import sys
+import unicodedata
 from playwright.async_api import async_playwright, Browser
 from tqdm.asyncio import tqdm
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
-INPUT_FILE   = "QnA_links.json"
+INPUT_FILE   = "data/fine_tuning/QnA_links.json"
 OUTPUT_FILE  = "QnA_data.json"
 MAX_CRAWL    = 2000
-NUM_WORKERS  = 10     # ← truly concurrent pages (no lock needed)
+NUM_WORKERS  = 4     # ← truly concurrent pages (no lock needed)
 TIMEOUT      = 30000  # ms per page
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -18,7 +19,7 @@ USER_AGENT = (
     "Chrome/147.0.0.0 Safari/537.36"
 )
 
-JS_EXTRACT = """
+JS_EXTRACT_HTML = """
 (container) => {
     const blockTags = ['P','DIV','LI','H1','H2','H3','H4','H5','H6','BR'];
     const skipTags = ['SCRIPT','STYLE','NOSCRIPT','IFRAME'];
@@ -50,13 +51,13 @@ JS_EXTRACT = """
             }
 
             else if (child.tagName === 'BLOCKQUOTE') {
-                result += '\\n[QUOTE]\\n' + getCleanText(child).trim() + '\\n[/QUOTE]\\n';
+                result += '<blockquote>' + getCleanText(child).trim() + '</blockquote>';
             }
 
             else {
                 const inner = getCleanText(child);
                 if (blockTags.includes(child.tagName)) {
-                    result += inner + '\\n';
+                    result += inner + '<br>';
                 } else {
                     result += inner;
                 }
@@ -68,6 +69,92 @@ JS_EXTRACT = """
     return getCleanText(container);
 }
 """
+
+JS_EXTRACT_MARKDOWN = """
+(container) => {
+    const blockTags = ['P','DIV','LI','H1','H2','H3','H4','H5','H6'];
+    const skipTags = ['SCRIPT','STYLE','NOSCRIPT','IFRAME'];
+    const skipClasses = ['advertisement','ads','ad-slot','gpt-ad'];
+
+    function getCleanText(node) {
+        let result = '';
+
+        for (const child of node.childNodes) {
+
+            // Skip unwanted elements
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                if (skipTags.includes(child.tagName)) continue;
+                if (skipClasses.some(c => child.className && child.className.includes(c))) continue;
+                if (child.id && child.id.includes('div-gpt-ad')) continue;
+            }
+
+            // Plain text
+            if (child.nodeType === Node.TEXT_NODE) {
+                result += child.textContent;
+            }
+
+            // Bold
+            else if (child.tagName === 'STRONG' || child.tagName === 'B') {
+                result += '**' + getCleanText(child).trim() + '**';
+            }
+
+            // Italic
+            else if (child.tagName === 'EM' || child.tagName === 'I') {
+                result += '*' + getCleanText(child).trim() + '*';
+            }
+
+            // Underline → fallback (Markdown has no native underline)
+            else if (child.tagName === 'U') {
+                result += getCleanText(child).trim();
+            }
+
+            // Blockquote
+            else if (child.tagName === 'BLOCKQUOTE') {
+                const inner = getCleanText(child).trim()
+                    .split('\\n')
+                    .map(line => '> ' + line)
+                    .join('\\n');
+                result += '\\n' + inner + '\\n';
+            }
+
+            // Headings
+            else if (child.tagName && child.tagName.match(/^H[1-6]$/)) {
+                const level = parseInt(child.tagName[1]);
+                const prefix = '#'.repeat(level);
+                result += '\\n' + prefix + ' ' + getCleanText(child).trim() + '\\n';
+            }
+
+            // List items
+            else if (child.tagName === 'LI') {
+                result += '\\n- ' + getCleanText(child).trim();
+            }
+
+            // Generic elements
+            else {
+                const inner = getCleanText(child).trim();
+                if (blockTags.includes(child.tagName)) {
+                    result += '\\n' + inner + '\\n';
+                } else {
+                    result += inner;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    return getCleanText(container)
+        .replace(/\\n{3,}/g, '\\n\\n')  // normalize spacing
+        .trim();
+}
+"""
+
+def remove_diacritics(text: str) -> str:
+    # Normalize to decomposed form (NFD) to separate base characters and diacritics
+    text = text.replace("đ", "d").replace("Đ", "D")  
+    normalized = unicodedata.normalize('NFD', text)
+    # Keep only ASCII characters, removing diacritics
+    return ''.join(char for char in normalized if unicodedata.category(char) != 'Mn')
 
 async def main():
     max_crawl   = int(sys.argv[1]) if len(sys.argv) > 1 else MAX_CRAWL
@@ -101,7 +188,7 @@ async def main():
                     doc_type = await page.locator(
                         "xpath=/html/body/main/div[4]/div/div[2]/div/article/div[1]/div[1]/a"
                     ).inner_text(timeout=TIMEOUT)
-                    doc_type = doc_type.replace(" ", "-").lower()
+                    doc_type = remove_diacritics(doc_type).replace(" ", "-").lower()
 
                     paragraphs = await page.locator(
                         "xpath=/html/body/main/div[4]/div/div[2]/div/article/div[2]/div/p"
@@ -118,18 +205,26 @@ async def main():
                     article_element = page.locator(
                         "xpath=/html/body/main/div[4]/div/div[2]/div/article/div[4]/div[1]"
                     )
-                    article_content = await article_element.evaluate(JS_EXTRACT)
-                    article_content = (
-                        article_content.split("<strong><em>Xem thêm:</em></strong>")[0]
-                                       .replace("<strong>Trả lời:</strong>", "")
-                                       .strip()
+                    article_content_markdown = await article_element.evaluate(JS_EXTRACT_MARKDOWN)
+                    article_content_markdown = (
+                        article_content_markdown.split("***Xem thêm:***")[0]
+                                                .replace("**Trả lời:**", "")
+                                                .strip()
+                    )
+                    
+                    article_content_html     = await article_element.evaluate(JS_EXTRACT_HTML)
+                    article_content_html = (
+                        article_content_html.split("<strong><em>Xem thêm:</em></strong>")[0]
+                                             .replace("<strong>Trả lời:</strong>", "")
+                                             .strip()
                     )
 
                     return {
                         **item,
                         "doc_type":        doc_type,
                         "full_question":   full_question,
-                        "article_content": article_content,
+                        "article_content_markdown": article_content_markdown,
+                        "article_content_html": article_content_html,
                     }
 
                 except Exception as e:
