@@ -11,11 +11,6 @@ from queue import Empty
 
 # API Keys configuration
 GEMINI_API_KEY_LIST = [
-                "AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-                "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-                "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8",
-                "AIzaSyAdis532XF3hKGdIlZ7PjvT0U4pi1FhWDw",
-                "AIzaSyA8HYpppKJ84wAveUCdeMy6mTgETPNbQmw",
 ]
 # Model configuration
 MODEL_TYPE = "gemini-2.0-flash"
