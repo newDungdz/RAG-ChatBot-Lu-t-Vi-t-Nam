@@ -4,11 +4,7 @@ import time
 from tqdm import tqdm
 import google.generativeai as genai
 
-API_KEY_LIST = ["AIzaSyCKtN98H-n2idRhIgWpvzcw-4cqdzik9rE",
-                "AIzaSyAhZsYmuI9Waxj1o4ZXcT6lCYszhmVpWcM",
-                "AIzaSyClqpWZjhwiFJ7kXJdalC-HOQ4GzNbGkq8",
-                "AIzaSyAdis532XF3hKGdIlZ7PjvT0U4pi1FhWDw",
-                "AIzaSyA8HYpppKJ84wAveUCdeMy6mTgETPNbQmw",]
+API_KEY_LIST = [,]
 API_KEY_IDX = 0
 API_KEY = API_KEY_LIST[API_KEY_IDX]
 
