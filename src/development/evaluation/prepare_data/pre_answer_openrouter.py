@@ -4,15 +4,15 @@ import requests
 import os
 
 # Your OpenRouter API Key
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = "sk-or-v1-64f38b227671cea5241b7dec8bcbae9a7e0409d878e217e495d635fee964ce2f3"
 
 # The OpenRouter API endpoint for chat completions
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 PROVISIONING_API_KEYS =[
-"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",
-"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",
-"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",
-"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"
+"sk-or-v1-cd1170ff204e6654177b629d87ac989698f6efda254ff234f08767a570a1eeb23",
+"sk-or-v1-1ae259b7295080644fe053c2b3cbef263aa7711d320277058d06a85b9de67cc43",
+"sk-or-v1-88f8ca5832e16f963d4e214206f88cf888df4554bf1e0ff7deef9fb7b11c526e3",
+"sk-or-v1-7dba3f75cb15f59b2302a101aa2a6cee5d8497fe974f1fd0334e39e088e7bbb43"
 ]
 # Rate limiting delays (in seconds)
 RATE_LIMIT_DELAYS = {
